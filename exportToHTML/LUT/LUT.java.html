@@ -1,0 +1,166 @@
+<html>
+<head>
+<title>LUT.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #6897bb;}
+.s3 { color: #808080;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+LUT.java</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span><span class="s1">LUT</span><span class="s0">;</span>
+
+<span class="s0">import </span><span class="s1">com.sun.tools.javac.code.Type</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">robocode.RobocodeFileOutputStream</span><span class="s0">;</span>
+
+<span class="s0">import </span><span class="s1">java.io.*</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.util.HashMap</span><span class="s0">;</span>
+
+<span class="s0">public class </span><span class="s1">LUT </span><span class="s0">implements </span><span class="s1">LUTInterface {</span>
+
+    <span class="s0">private int </span><span class="s1">argNumInputs</span><span class="s0">;</span>
+    <span class="s0">private int</span><span class="s1">[] argVariableFloor</span><span class="s0">;</span>
+    <span class="s0">private int</span><span class="s1">[] argVariableCeiling</span><span class="s0">;</span>
+    <span class="s0">private int</span><span class="s1">[] difference</span><span class="s0">;</span>
+    <span class="s0">private static int </span><span class="s1">NUMOFACTIONS = </span><span class="s2">4</span><span class="s0">;</span>
+
+
+    <span class="s0">public </span><span class="s1">HashMap&lt;Integer</span><span class="s0">, </span><span class="s1">Double&gt; lookupTable = </span><span class="s0">new </span><span class="s1">HashMap&lt;Integer</span><span class="s0">, </span><span class="s1">Double&gt;()</span><span class="s0">;</span>
+
+    <span class="s0">public </span><span class="s1">LUT(</span><span class="s0">int </span><span class="s1">argNumInputs</span><span class="s0">,int</span><span class="s1">[] argVariableFloor</span><span class="s0">,int</span><span class="s1">[] argVariableCeiling){</span>
+        <span class="s0">this</span><span class="s1">.argNumInputs=argNumInputs</span><span class="s0">;</span>
+        <span class="s0">this</span><span class="s1">.argVariableFloor= argVariableFloor</span><span class="s0">;</span>
+        <span class="s0">this</span><span class="s1">.argVariableCeiling = argVariableCeiling</span><span class="s0">;</span>
+        <span class="s1">initialiseLUT()</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+    <span class="s1">@Override</span>
+    <span class="s0">public void </span><span class="s1">initialiseLUT() {</span>
+        <span class="s0">int </span><span class="s1">size = sizeofQTable()</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">i&lt;=size</span><span class="s0">;</span><span class="s1">i++){</span>
+            <span class="s1">lookupTable.put(i</span><span class="s0">,</span><span class="s2">0.0</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+    <span class="s1">}</span>
+
+    <span class="s1">@Override</span>
+    <span class="s0">public int </span><span class="s1">indexFor(</span><span class="s0">double</span><span class="s1">[] X) {</span>
+        <span class="s0">int </span><span class="s1">multipleFactor=</span><span class="s2">1</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">index = X[</span><span class="s2">0</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i=</span><span class="s2">1</span><span class="s0">;</span><span class="s1">i&lt;X.length</span><span class="s0">;</span><span class="s1">i++){</span>
+            <span class="s1">multipleFactor=multipleFactor*difference[i-</span><span class="s2">1</span><span class="s1">]</span><span class="s0">;</span>
+            <span class="s1">index = index+X[i]*multipleFactor</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+        <span class="s0">return </span><span class="s1">(</span><span class="s0">int</span><span class="s1">)index</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+
+    <span class="s0">public double</span><span class="s1">[] getMaximumQ(</span><span class="s0">double</span><span class="s1">[] X) {</span>
+        <span class="s0">double</span><span class="s1">[] searchArray = </span><span class="s0">new double</span><span class="s1">[X.length+NUMOFACTIONS]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">i&lt;X.length</span><span class="s0">;</span><span class="s1">i++){</span>
+            <span class="s1">searchArray[i]=X[i]</span><span class="s0">;</span>
+        <span class="s1">}</span>
+        <span class="s0">double</span><span class="s1">[] maximumArray=</span><span class="s0">new double</span><span class="s1">[</span><span class="s2">9</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">maximum = -</span><span class="s2">10000</span><span class="s0">;</span>
+
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">i&lt;difference[</span><span class="s2">5</span><span class="s1">]</span><span class="s0">;</span><span class="s1">i++){</span>
+            <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">j=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">j&lt;difference[</span><span class="s2">6</span><span class="s1">]</span><span class="s0">;</span><span class="s1">j++){</span>
+                <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">k=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">k&lt;difference[</span><span class="s2">7</span><span class="s1">]</span><span class="s0">;</span><span class="s1">k++){</span>
+                    <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">l=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">l&lt;difference[</span><span class="s2">8</span><span class="s1">]</span><span class="s0">;</span><span class="s1">l++){</span>
+                        <span class="s1">searchArray[</span><span class="s2">5</span><span class="s1">]=i</span><span class="s0">;</span>
+                        <span class="s1">searchArray[</span><span class="s2">6</span><span class="s1">]=j</span><span class="s0">;</span>
+                        <span class="s1">searchArray[</span><span class="s2">7</span><span class="s1">]=k</span><span class="s0">;</span>
+                        <span class="s1">searchArray[</span><span class="s2">8</span><span class="s1">]=l</span><span class="s0">;</span>
+                        <span class="s0">double </span><span class="s1">output=outputFor(searchArray)</span><span class="s0">;</span>
+                        <span class="s0">if </span><span class="s1">(maximum&lt;output){</span>
+                            <span class="s1">maximum = output</span><span class="s0">;</span>
+                            <span class="s1">maximumArray=searchArray</span><span class="s0">;</span>
+                        <span class="s1">}</span>
+                    <span class="s1">}</span>
+                <span class="s1">}</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">maximumArray</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+    <span class="s1">@Override</span>
+    <span class="s0">public double </span><span class="s1">outputFor(</span><span class="s0">double</span><span class="s1">[] X) {</span>
+        <span class="s0">int </span><span class="s1">i = indexFor(X)</span><span class="s0">;</span>
+        <span class="s0">if</span><span class="s1">(lookupTable.containsKey(i)){</span>
+            <span class="s3">//System.out.println(&quot;Found a match state in the LUT! &quot;);</span>
+            <span class="s0">return </span><span class="s1">lookupTable.get(i)</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">else return </span><span class="s2">0</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">@Override</span>
+    <span class="s0">public double </span><span class="s1">train(</span><span class="s0">double</span><span class="s1">[] X</span><span class="s0">, double </span><span class="s1">argValue) {</span>
+        <span class="s0">int </span><span class="s1">i = indexFor(X)</span><span class="s0">;</span>
+        <span class="s1">lookupTable.put(i</span><span class="s0">, </span><span class="s1">argValue)</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s2">0</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">@Override</span>
+    <span class="s0">public void </span><span class="s1">save(File argFile) {</span>
+        <span class="s0">try</span>
+        <span class="s1">{</span>
+            <span class="s1">File file = argFile</span><span class="s0">;</span>
+            <span class="s1">FileOutputStream f = </span><span class="s0">new </span><span class="s1">FileOutputStream(file)</span><span class="s0">;</span>
+            <span class="s1">ObjectOutputStream s = </span><span class="s0">new </span><span class="s1">ObjectOutputStream(f)</span><span class="s0">;</span>
+            <span class="s1">s.writeObject(</span><span class="s0">this</span><span class="s1">.lookupTable)</span><span class="s0">;</span>
+            <span class="s1">s.close()</span><span class="s0">;</span>
+        <span class="s1">}</span>
+        <span class="s0">catch </span><span class="s1">(Exception e)</span>
+        <span class="s1">{</span>
+        <span class="s1">}</span>
+
+    <span class="s1">}</span>
+
+    <span class="s1">@Override</span>
+    <span class="s0">public void </span><span class="s1">load(File argFileName) </span><span class="s0">throws </span><span class="s1">IOException {</span>
+
+        <span class="s0">try</span>
+        <span class="s1">{</span>
+            <span class="s1">File file = argFileName</span><span class="s0">;</span>
+            <span class="s1">FileInputStream f = </span><span class="s0">new </span><span class="s1">FileInputStream(file)</span><span class="s0">;</span>
+            <span class="s1">ObjectInputStream s = </span><span class="s0">new </span><span class="s1">ObjectInputStream(f)</span><span class="s0">;</span>
+            <span class="s0">this</span><span class="s1">.lookupTable = (HashMap&lt;Integer</span><span class="s0">, </span><span class="s1">Double&gt;) s.readObject()</span><span class="s0">;</span>
+            <span class="s1">s.close()</span><span class="s0">;</span>
+
+        <span class="s1">}</span>
+        <span class="s0">catch </span><span class="s1">(Exception e)</span>
+        <span class="s1">{</span>
+        <span class="s1">}</span>
+
+    <span class="s1">}</span>
+
+    <span class="s0">public int </span><span class="s1">sizeofQTable() {</span>
+        <span class="s1">difference = </span><span class="s0">new int</span><span class="s1">[argNumInputs]</span><span class="s0">;</span>
+        <span class="s0">int </span><span class="s1">size=</span><span class="s2">1</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i=</span><span class="s2">0</span><span class="s0">;</span><span class="s1">i&lt;argNumInputs</span><span class="s0">;</span><span class="s1">i++){</span>
+            <span class="s1">difference[i]=argVariableCeiling[i]-argVariableFloor[i] + </span><span class="s2">1</span><span class="s0">;</span>
+            <span class="s1">size = size*difference[i]</span><span class="s0">;</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">size</span><span class="s0">;</span>
+
+    <span class="s1">}</span>
+
+
+    <span class="s0">public void </span><span class="s1">saveData(File file)</span>
+    <span class="s1">{</span>
+
+    <span class="s1">}</span>
+<span class="s1">}</span>
+</pre>
+</body>
+</html>

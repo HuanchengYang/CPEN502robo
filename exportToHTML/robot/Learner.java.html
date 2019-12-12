@@ -1,0 +1,60 @@
+<html>
+<head>
+<title>Learner.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #6897bb;}
+.s3 { color: #808080;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+Learner.java</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span><span class="s1">robot</span><span class="s0">;</span>
+
+<span class="s0">import </span><span class="s1">LUT.LUT</span><span class="s0">;</span>
+
+<span class="s0">public class </span><span class="s1">Learner {</span>
+    <span class="s0">public static final double </span><span class="s1">LearningRate = </span><span class="s2">0.1</span><span class="s0">;</span>
+    <span class="s0">public static final double </span><span class="s1">DiscountRate = </span><span class="s2">0.9</span><span class="s0">;</span>
+    <span class="s0">public static final double </span><span class="s1">ExploitationRate = </span><span class="s2">1</span><span class="s0">;</span>
+    <span class="s0">private boolean </span><span class="s1">initialize = </span><span class="s0">true;</span>
+    <span class="s0">private </span><span class="s1">LUT lut</span><span class="s0">;</span>
+
+    <span class="s0">public </span><span class="s1">Learner(LUT lut)</span>
+    <span class="s1">{</span>
+        <span class="s0">this</span><span class="s1">.lut = lut</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public void </span><span class="s1">learn(</span><span class="s0">double </span><span class="s1">stateandaction[]</span><span class="s0">,double </span><span class="s1">newstate[]</span><span class="s0">, double </span><span class="s1">immediateReward)</span>
+    <span class="s1">{</span>
+        <span class="s0">double</span><span class="s1">[] oldstate = </span><span class="s0">new double</span><span class="s1">[</span><span class="s2">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">immediateReward=</span><span class="s2">0</span><span class="s0">;</span>
+        <span class="s1">oldstate[</span><span class="s2">0</span><span class="s1">]=stateandaction[</span><span class="s2">0</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">oldstate[</span><span class="s2">1</span><span class="s1">]=stateandaction[</span><span class="s2">1</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">oldstate[</span><span class="s2">2</span><span class="s1">]=stateandaction[</span><span class="s2">2</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">oldstate[</span><span class="s2">3</span><span class="s1">]=stateandaction[</span><span class="s2">3</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">oldstate[</span><span class="s2">4</span><span class="s1">]=stateandaction[</span><span class="s2">4</span><span class="s1">]</span><span class="s0">;</span>
+
+        <span class="s3">//System.out.println(&quot;Reinforcement: &quot; + immediateReward);</span>
+        <span class="s0">if </span><span class="s1">(initialize)</span>
+            <span class="s1">initialize = </span><span class="s0">false;</span>
+        <span class="s0">else</span>
+        <span class="s1">{</span>
+            <span class="s0">double </span><span class="s1">oldQValue = lut.outputFor(stateandaction)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newQValue = (</span><span class="s2">1 </span><span class="s1">- LearningRate) * oldQValue + LearningRate * (immediateReward + DiscountRate * lut.outputFor(lut.getMaximumQ(oldstate)))</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">convergence = newQValue-oldQValue</span><span class="s0">;</span>
+            <span class="s3">//System.out.println(&quot;convergence is&quot;+ convergence);</span>
+            <span class="s1">lut.train(stateandaction</span><span class="s0">, </span><span class="s1">newQValue)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+<span class="s1">}</span>
+</pre>
+</body>
+</html>

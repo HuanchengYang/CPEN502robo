@@ -227,7 +227,7 @@ public class BackPropagation extends NeuralNet implements NeuralNetInterface {
             round+=1;
             System.out.print(round+",");
             System.out.println(totalerror);
-            if (round>50000){
+            if (round>10000){
                 break;
             }
         }

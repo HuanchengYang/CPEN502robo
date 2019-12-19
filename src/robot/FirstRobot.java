@@ -1,6 +1,7 @@
 package robot;
 
 import LUT.LUT;
+import NeuralNetwork.BackPropagationLUT;
 import robocode.*;
 
 
@@ -22,6 +23,7 @@ public class FirstRobot extends AdvancedRobot {
     private Learner learner;
     private static int numState=6;
     private static int numAction=5;
+    private static double explorationRate=0;
 
     double[] state;
     double [] action;
@@ -42,9 +44,9 @@ public class FirstRobot extends AdvancedRobot {
         setBulletColor(Color.red);
 
         //TODO:Reconstruct the LUT
-        lut = new LUT();
+
+        learner = new Learner();
         loadData();
-        learner = new Learner(lut);
         target = new Target();
         target.distance = 100000;
         //END
@@ -55,7 +57,8 @@ public class FirstRobot extends AdvancedRobot {
         turnRadarRightRadians(2 * Math.PI);
         state = getState();
         while (true) {
-            action = robotMovement(state, lut);
+            //action = robotMovement(state, lut);
+            action = robotMovementBP(state);
             firePower = 400 / target.distance;
             if (firePower > 3)
                 firePower = 3;
@@ -68,14 +71,48 @@ public class FirstRobot extends AdvancedRobot {
             execute();
             state = getState();
             //System.out.println("immediatereward is "+immediateReward);
-            learner.learnOffPolicy(state,action,immediateReward);
+            //learner.learnOffPolicy(state,action,immediateReward);
+            learner.onlineLearning(state,action,immediateReward);
             accumulateReward += immediateReward;
             immediateReward=0;
         }
     }
 
+    private double[] robotMovementBP(double[] state) {
+        double[] action;
+        if (Math.random()>explorationRate){
+            action = learner.getBestAction(state);
+            //System.out.println("Selected Best Action!");
+        } else {
+            action = learner.getRandomAction();
+            //System.out.println("Selected Random Action!");
+        }
 
-    private double[] robotMovement(double[] state, LUT lut) {
+        if (action[0] > 0) {
+            setAhead((action[0]) * robotMoveDistance);
+        }
+        if (action[1] > 0) {
+            setBack((action[1]) * robotMoveDistance);
+        }
+
+        if (action[2] > 0) {
+            setTurnLeft(action[2] * robotTurnDegree);
+            setAhead(robotMoveDistance);
+        }
+
+        if (action[3] > 0) {
+            setTurnRight(action[3] * robotTurnDegree);
+            setAhead(robotMoveDistance);
+        }
+
+        if (action[4] > 0) {
+            willFire=true;
+        }
+        return action;
+    }
+
+
+    private double[] robotMovement(double[] state) {
 
         double actionInt;
         double stateInt=learner.convertArrayStatetoInt(state);
@@ -108,9 +145,9 @@ public class FirstRobot extends AdvancedRobot {
 
     //TODO improve state class
     private double[] getState() {
-        int heading = State.getHeading(getHeading());
-        int targetDistance = State.getTargetDistance(target.distance);
-        int targetBearing = State.getTargetBearing(target.bearing);
+        double heading = State.getHeading(getHeading());
+        double targetDistance = State.getTargetDistance(target.distance);
+        double targetBearing = State.getTargetBearing(target.bearing);
         int HorizontalNSafe = State.HorizontalHitWall(getX(),getBattleFieldWidth());
         int VerticalNSafe = State.VerticalHitWall(getY(), getBattleFieldHeight());
         double[] state = {heading, targetDistance, targetBearing, HorizontalNSafe, VerticalNSafe,isHitByBullet};
@@ -168,21 +205,21 @@ public class FirstRobot extends AdvancedRobot {
     public void onBulletHit(BulletHitEvent e) {
         if (target.name.equals(e.getName())) {
 
-            double change = e.getBullet().getPower() * 5;
+            double change = e.getBullet().getPower() * 10;
             immediateReward += change;
         }
     }
 
 
     public void onBulletMissed(BulletMissedEvent e) {
-        double change = -e.getBullet().getPower();
+        double change = -e.getBullet().getPower() * 4;
         immediateReward += change;
     }
 
     public void onHitByBullet(HitByBulletEvent e) {
         if (target.name.equals(e.getName())) {
             double power = e.getBullet().getPower();
-            double change = -5 * power;
+            double change = -8 * power;
             immediateReward += change;
         }
         isHitByBullet = 1;
@@ -190,13 +227,13 @@ public class FirstRobot extends AdvancedRobot {
 
     public void onHitRobot(HitRobotEvent e) {
         if (target.name.equals(e.getName())) {
-            double change = -6.0;
+            double change = -4.0;
             immediateReward += change;
         }
     }
 
     public void onHitWall(HitWallEvent e) {
-        double change = -5;
+        double change = -2;
         immediateReward += change;
     }
 
@@ -233,34 +270,15 @@ public class FirstRobot extends AdvancedRobot {
         accumulateReward +=100;
         saveData();
         System.out.println("Win!");
+        System.out.println("Reward is"+accumulateReward);
         int winningFlag=1;
-
-        PrintStream w = null;
-        try {
-            w = new PrintStream(new RobocodeFileOutputStream(getDataFile("battle_history.dat").getAbsolutePath(), true));
-            w.println(accumulateReward +" \t"+getRoundNum()+" \t"+winningFlag+" \t"+Learner.ExploitationRate);
-            if (w.checkError())
-                System.out.println("Could not save the data!");
-            w.close();
-        }
-        catch (IOException e) {
-            System.out.println("IOException trying to write: " + e);
-        }
-        finally {
-            try {
-                if (w != null)
-                    w.close();
-            }
-            catch (Exception e) {
-                System.out.println("Exception trying to close writer: " + e);
-            }
-        }
     }
 
     public void onDeath(DeathEvent event) {
         accumulateReward -=100;
         saveData();
         System.out.println("Lose!");
+        System.out.println("Reward is"+accumulateReward);
         int losingFlag=0;
 //        PrintStream w = null;
 //        try {
@@ -286,16 +304,16 @@ public class FirstRobot extends AdvancedRobot {
 
     public void loadData() {
         try {
-            File file = getDataFile("lut4.txt");
-            lut.load(file);
+            File file = getDataFile("weightlist4.txt");
+            learner.BPLUT1.load(file);
         } catch (Exception e) {
         }
     }
 
     public void saveData() {
         try {
-            File file = getDataFile("lut4.txt");
-            lut.save(file);
+            File file = getDataFile("weightlist4.txt");
+            learner.BPLUT1.save(file);
         } catch (Exception e) {
             out.println("Exception trying to write: " + e);
         }

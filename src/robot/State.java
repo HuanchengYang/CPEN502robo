@@ -11,24 +11,25 @@ public class State {
     public static final int NumofState = NumHeading*NumTargetDistance*NumTargetBearing*NumHorizontalHitWall*NumVerticalHitWall*NumIsHit;
 
 
-    public static int getHeading(double heading)
+    public static double getHeading(double heading)
     {
         double angle = 360 / NumHeading;
         double newHeading = heading + angle / 2;
         if (newHeading > 360.0)
             newHeading -= 360.0;
-        return (int)(newHeading / angle);
+        return (newHeading / angle);
     }
 
-    public static int getTargetDistance(double value)
+    public static double getTargetDistance(double value)
     {
-        int distance = (int)(value / (1000/NumTargetDistance));
+        //int distance = (int)(value / (1000/NumTargetDistance));
+        double distance = (value / (1000/NumTargetDistance));
         if (distance > NumTargetDistance - 1)
             distance = NumTargetDistance - 1;
         return distance;
     }
 
-    public static int getTargetBearing(double bearing)
+    public static double getTargetBearing(double bearing)
     {
         double PIx2 = Math.PI * 2;
         if (bearing < 0)
@@ -37,7 +38,7 @@ public class State {
         double newBearing = bearing + angle / 2;
         if (newBearing > PIx2)
             newBearing -= PIx2;
-        return (int)(newBearing / angle);
+        return (newBearing / angle);
     }
 
     public static int HorizontalHitWall(double robotX, double BattleFieldX)  {

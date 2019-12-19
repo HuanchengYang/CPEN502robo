@@ -6,8 +6,8 @@
 .s0 { color: #cc7832;}
 .s1 { color: #a9b7c6;}
 .s2 { color: #6897bb;}
-.s3 { color: #808080;}
-.s4 { color: #629755; font-style: italic;}
+.s3 { color: #629755; font-style: italic;}
+.s4 { color: #808080;}
 .s5 { color: #6a8759;}
 </style>
 </head>
@@ -20,6 +20,7 @@ FirstRobot.java</font>
 <pre><span class="s0">package </span><span class="s1">robot</span><span class="s0">;</span>
 
 <span class="s0">import </span><span class="s1">LUT.LUT</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">NeuralNetwork.BackPropagationLUT</span><span class="s0">;</span>
 <span class="s0">import </span><span class="s1">robocode.*</span><span class="s0">;</span>
 
 
@@ -29,273 +30,313 @@ FirstRobot.java</font>
 
 
 <span class="s0">public class </span><span class="s1">FirstRobot </span><span class="s0">extends </span><span class="s1">AdvancedRobot {</span>
-    <span class="s0">int </span><span class="s1">dist = </span><span class="s2">50</span><span class="s0">; </span><span class="s3">// distance to move when we're hit</span>
-    <span class="s0">public static final int </span><span class="s1">robotMoveDistance = </span><span class="s2">300</span><span class="s0">;</span>
-    <span class="s0">public static final double </span><span class="s1">robotTurnDegree =  </span><span class="s2">20.0</span><span class="s0">;</span>
-    <span class="s0">public static int </span><span class="s1">stateactionIndex[] = </span><span class="s0">new int</span><span class="s1">[</span><span class="s2">9</span><span class="s1">]</span><span class="s0">;</span>
-    <span class="s0">public static final int </span><span class="s1">floor[] = {</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s0">,</span><span class="s2">0</span><span class="s1">}</span><span class="s0">;</span>
-    <span class="s0">public static final int </span><span class="s1">ceiling[] = {</span><span class="s2">3</span><span class="s0">,</span><span class="s2">19</span><span class="s0">,</span><span class="s2">3</span><span class="s0">,</span><span class="s2">9</span><span class="s0">,</span><span class="s2">9</span><span class="s0">,</span><span class="s2">1</span><span class="s0">,</span><span class="s2">1</span><span class="s0">,</span><span class="s2">1</span><span class="s0">,</span><span class="s2">1</span><span class="s1">}</span><span class="s0">;</span>
-    <span class="s0">public </span><span class="s1">Target target</span><span class="s0">;</span>
-    <span class="s0">public static </span><span class="s1">LUT lut</span><span class="s0">;</span>
-    <span class="s0">private static int </span><span class="s1">totalGame</span><span class="s0">;</span>
-    <span class="s0">private static int </span><span class="s1">winGame</span><span class="s0">;</span>
-    <span class="s0">private static int </span><span class="s1">loseGame</span><span class="s0">;</span>
+    <span class="s0">private static final int </span><span class="s1">robotMoveDistance = </span><span class="s2">80</span><span class="s0">;</span>
+    <span class="s0">private static final double </span><span class="s1">robotTurnDegree = </span><span class="s2">10.0</span><span class="s0">;</span>
+
+    <span class="s0">private </span><span class="s1">Target target</span><span class="s0">;</span>
+    <span class="s0">private double </span><span class="s1">oppoDist</span><span class="s0">, </span><span class="s1">oppoBearing</span><span class="s0">;</span>
+    <span class="s0">private boolean </span><span class="s1">found = </span><span class="s0">false;</span>
+    <span class="s0">private static </span><span class="s1">LUT lut</span><span class="s0">;</span>
     <span class="s0">private double </span><span class="s1">firePower</span><span class="s0">;</span>
-    <span class="s0">private int </span><span class="s1">isHitWall = </span><span class="s2">0</span><span class="s0">;</span>
     <span class="s0">private int </span><span class="s1">isHitByBullet = </span><span class="s2">0</span><span class="s0">;</span>
     <span class="s0">private </span><span class="s1">Learner learner</span><span class="s0">;</span>
+    <span class="s0">private static int </span><span class="s1">numState=</span><span class="s2">6</span><span class="s0">;</span>
+    <span class="s0">private static int </span><span class="s1">numAction=</span><span class="s2">5</span><span class="s0">;</span>
+    <span class="s0">private static double </span><span class="s1">explorationRate=</span><span class="s2">0</span><span class="s0">;</span>
 
-    <span class="s0">double</span><span class="s1">[] oldstateandaction</span><span class="s0">;</span>
-    <span class="s0">double</span><span class="s1">[] newstate</span><span class="s0">;</span>
-    <span class="s0">private double </span><span class="s1">immediatereward</span><span class="s0">;</span>
+    <span class="s0">double</span><span class="s1">[] state</span><span class="s0">;</span>
+    <span class="s0">double </span><span class="s1">[] action</span><span class="s0">;</span>
+    <span class="s0">private double </span><span class="s1">immediateReward=</span><span class="s2">0</span><span class="s0">;</span>
+    <span class="s0">private double </span><span class="s1">accumulateReward=</span><span class="s2">0</span><span class="s0">;</span>
+    <span class="s0">private boolean </span><span class="s1">willFire = </span><span class="s0">false;</span>
 
 
-
-    <span class="s4">/**</span>
-     <span class="s4">* run:  Fire's main run function</span>
-     <span class="s4">*/</span>
+    <span class="s3">/**</span>
+     <span class="s3">* run:  Fire's main run function</span>
+     <span class="s3">*/</span>
     <span class="s0">public void </span><span class="s1">run() {</span>
-        <span class="s1">totalGame=</span><span class="s2">0</span><span class="s0">;</span>
-        <span class="s1">winGame=</span><span class="s2">0</span><span class="s0">;</span>
-        <span class="s3">// Set colors</span>
+        <span class="s4">// Set colors</span>
         <span class="s1">setBodyColor(Color.orange)</span><span class="s0">;</span>
         <span class="s1">setGunColor(Color.orange)</span><span class="s0">;</span>
         <span class="s1">setRadarColor(Color.red)</span><span class="s0">;</span>
         <span class="s1">setScanColor(Color.red)</span><span class="s0">;</span>
         <span class="s1">setBulletColor(Color.red)</span><span class="s0">;</span>
 
-        <span class="s3">// Spin the gun around slowly... forever</span>
+        <span class="s4">//TODO:Reconstruct the LUT</span>
+
+        <span class="s1">learner = </span><span class="s0">new </span><span class="s1">Learner()</span><span class="s0">;</span>
+        <span class="s1">loadData()</span><span class="s0">;</span>
+        <span class="s1">target = </span><span class="s0">new </span><span class="s1">Target()</span><span class="s0">;</span>
+        <span class="s1">target.distance = </span><span class="s2">100000</span><span class="s0">;</span>
+        <span class="s4">//END</span>
+
+        <span class="s1">setAdjustGunForRobotTurn(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s1">setAdjustRadarForGunTurn(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s1">execute()</span><span class="s0">;</span>
+        <span class="s1">turnRadarRightRadians(</span><span class="s2">2 </span><span class="s1">* Math.PI)</span><span class="s0">;</span>
+        <span class="s1">state = getState()</span><span class="s0">;</span>
         <span class="s0">while </span><span class="s1">(</span><span class="s0">true</span><span class="s1">) {</span>
-            <span class="s1">lut = </span><span class="s0">new </span><span class="s1">LUT(</span><span class="s2">9</span><span class="s0">,</span><span class="s1">floor</span><span class="s0">,</span><span class="s1">ceiling)</span><span class="s0">;</span>
-            <span class="s1">loadData()</span><span class="s0">;</span>
-            <span class="s1">learner= </span><span class="s0">new </span><span class="s1">Learner(lut)</span><span class="s0">;</span>
-            <span class="s1">target = </span><span class="s0">new </span><span class="s1">Target()</span><span class="s0">;</span>
-            <span class="s1">target.distance = </span><span class="s2">100000</span><span class="s0">;</span>
-
-            <span class="s1">setAdjustGunForRobotTurn(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
-            <span class="s1">setAdjustRadarForGunTurn(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
-            <span class="s1">turnRadarRightRadians(</span><span class="s2">2 </span><span class="s1">* Math.PI)</span><span class="s0">;</span>
-            <span class="s1">newstate = getState()</span><span class="s0">;</span>
-            <span class="s0">while </span><span class="s1">(</span><span class="s0">true</span><span class="s1">)</span>
-            <span class="s1">{</span>
-                <span class="s1">oldstateandaction=robotMovement(newstate</span><span class="s0">,</span><span class="s1">lut)</span><span class="s0">;</span>
-                <span class="s1">firePower = </span><span class="s2">400</span><span class="s1">/target.distance</span><span class="s0">;</span>
-                <span class="s0">if </span><span class="s1">(firePower &gt; </span><span class="s2">3</span><span class="s1">)</span>
-                    <span class="s1">firePower = </span><span class="s2">3</span><span class="s0">;</span>
-                <span class="s1">radarMovement(target)</span><span class="s0">;</span>
-                <span class="s1">gunMovement()</span><span class="s0">;</span>
-                <span class="s0">if </span><span class="s1">(getGunHeat() == </span><span class="s2">0</span><span class="s1">) {</span>
-                    <span class="s1">setFire(firePower)</span><span class="s0">;</span>
-                <span class="s1">}</span>
-                <span class="s1">execute()</span><span class="s0">;</span>
-                <span class="s1">newstate = getState()</span><span class="s0">;</span>
-                <span class="s1">learner.learn(oldstateandaction</span><span class="s0">,</span><span class="s1">newstate</span><span class="s0">,</span><span class="s1">immediatereward)</span><span class="s0">;</span>
+            <span class="s4">//action = robotMovement(state, lut);</span>
+            <span class="s1">action = robotMovementBP(state)</span><span class="s0">;</span>
+            <span class="s1">firePower = </span><span class="s2">400 </span><span class="s1">/ target.distance</span><span class="s0">;</span>
+            <span class="s0">if </span><span class="s1">(firePower &gt; </span><span class="s2">3</span><span class="s1">)</span>
+                <span class="s1">firePower = </span><span class="s2">3</span><span class="s0">;</span>
+            <span class="s1">radarMovement(target)</span><span class="s0">;</span>
+            <span class="s1">gunMovement()</span><span class="s0">;</span>
+            <span class="s0">if </span><span class="s1">(willFire) {</span>
+                <span class="s1">setFire(firePower)</span><span class="s0">;</span>
             <span class="s1">}</span>
+            <span class="s4">//END</span>
+            <span class="s1">execute()</span><span class="s0">;</span>
+            <span class="s1">state = getState()</span><span class="s0">;</span>
+            <span class="s4">//System.out.println(&quot;immediatereward is &quot;+immediateReward);</span>
+            <span class="s4">//learner.learnOffPolicy(state,action,immediateReward);</span>
+            <span class="s1">learner.onlineLearning(state</span><span class="s0">,</span><span class="s1">action</span><span class="s0">,</span><span class="s1">immediateReward)</span><span class="s0">;</span>
+            <span class="s1">accumulateReward += immediateReward</span><span class="s0">;</span>
+            <span class="s1">immediateReward=</span><span class="s2">0</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
+    <span class="s0">private double</span><span class="s1">[] robotMovementBP(</span><span class="s0">double</span><span class="s1">[] state) {</span>
+        <span class="s0">double</span><span class="s1">[] action</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">(Math.random()&gt;explorationRate){</span>
+            <span class="s1">action = learner.getBestAction(state)</span><span class="s0">;</span>
+            <span class="s4">//System.out.println(&quot;Selected Best Action!&quot;);</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+            <span class="s1">action = learner.getRandomAction()</span><span class="s0">;</span>
+            <span class="s4">//System.out.println(&quot;Selected Random Action!&quot;);</span>
+        <span class="s1">}</span>
 
-    <span class="s0">private double</span><span class="s1">[] robotMovement(</span><span class="s0">double</span><span class="s1">[] state</span><span class="s0">,</span><span class="s1">LUT lut)</span>
-    <span class="s1">{</span>
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">0</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setAhead((action[</span><span class="s2">0</span><span class="s1">]) * robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">1</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setBack((action[</span><span class="s2">1</span><span class="s1">]) * robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
 
-        <span class="s0">double</span><span class="s1">[] stateandaction = lut.getMaximumQ(state)</span><span class="s0">;</span>
-        <span class="s0">if </span><span class="s1">(stateandaction[</span><span class="s2">5</span><span class="s1">]==</span><span class="s2">1</span><span class="s1">){</span>
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">2</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setTurnLeft(action[</span><span class="s2">2</span><span class="s1">] * robotTurnDegree)</span><span class="s0">;</span>
             <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
         <span class="s1">}</span>
-        <span class="s0">if </span><span class="s1">(stateandaction[</span><span class="s2">6</span><span class="s1">]==</span><span class="s2">1</span><span class="s1">) {</span>
-            <span class="s1">setBack(robotMoveDistance)</span><span class="s0">;</span>
+
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">3</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setTurnRight(action[</span><span class="s2">3</span><span class="s1">] * robotTurnDegree)</span><span class="s0">;</span>
+            <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
         <span class="s1">}</span>
 
-        <span class="s0">if </span><span class="s1">(stateandaction[</span><span class="s2">7</span><span class="s1">]==</span><span class="s2">1</span><span class="s1">) {</span>
-            <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
-            <span class="s1">setTurnLeft(robotTurnDegree)</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">4</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">willFire=</span><span class="s0">true;</span>
         <span class="s1">}</span>
-
-        <span class="s0">if </span><span class="s1">(stateandaction[</span><span class="s2">8</span><span class="s1">]==</span><span class="s2">1</span><span class="s1">) {</span>
-            <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
-            <span class="s1">setTurnRight(robotTurnDegree)</span><span class="s0">;</span>
-        <span class="s1">}</span>
-        <span class="s0">return </span><span class="s1">stateandaction</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">action</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">private double</span><span class="s1">[] getState()</span>
-    <span class="s1">{</span>
+
+    <span class="s0">private double</span><span class="s1">[] robotMovement(</span><span class="s0">double</span><span class="s1">[] state) {</span>
+
+        <span class="s0">double </span><span class="s1">actionInt</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">stateInt=learner.convertArrayStatetoInt(state)</span><span class="s0">;</span>
+        <span class="s1">actionInt = lut.getBestAction(stateInt)</span><span class="s0">;</span>
+        <span class="s1">System.out.println(</span><span class="s5">&quot;Selected Best Action is: &quot;</span><span class="s1">+actionInt)</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] action = learner.convertIntActiontoArray(actionInt)</span><span class="s0">;</span>
+
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">0</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setAhead((action[</span><span class="s2">0</span><span class="s1">]) * robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">1</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setBack((action[</span><span class="s2">1</span><span class="s1">]) * robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">2</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setTurnLeft(action[</span><span class="s2">2</span><span class="s1">] * robotTurnDegree)</span><span class="s0">;</span>
+            <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">3</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">setTurnRight(action[</span><span class="s2">3</span><span class="s1">] * robotTurnDegree)</span><span class="s0">;</span>
+            <span class="s1">setAhead(robotMoveDistance)</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+        <span class="s0">if </span><span class="s1">(action[</span><span class="s2">4</span><span class="s1">] &gt; </span><span class="s2">0</span><span class="s1">) {</span>
+            <span class="s1">willFire=</span><span class="s0">true;</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">action</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s4">//TODO improve state class</span>
+    <span class="s0">private double</span><span class="s1">[] getState() {</span>
         <span class="s0">double </span><span class="s1">heading = State.getHeading(getHeading())</span><span class="s0">;</span>
         <span class="s0">double </span><span class="s1">targetDistance = State.getTargetDistance(target.distance)</span><span class="s0">;</span>
         <span class="s0">double </span><span class="s1">targetBearing = State.getTargetBearing(target.bearing)</span><span class="s0">;</span>
-        <span class="s3">//out.println(&quot;Stste(&quot; + heading + &quot;, &quot; + targetDistance + &quot;, &quot; + targetBearing + &quot;, &quot; + isHitWall + &quot;, &quot; + isHitByBullet + &quot;)&quot;);</span>
-        <span class="s0">double</span><span class="s1">[] state = {heading</span><span class="s0">,</span><span class="s1">targetDistance</span><span class="s0">,</span><span class="s1">targetBearing</span><span class="s0">,this</span><span class="s1">.isHitByBullet</span><span class="s0">,this</span><span class="s1">.isHitWall}</span><span class="s0">;</span>
+        <span class="s0">int </span><span class="s1">HorizontalNSafe = State.HorizontalHitWall(getX()</span><span class="s0">,</span><span class="s1">getBattleFieldWidth())</span><span class="s0">;</span>
+        <span class="s0">int </span><span class="s1">VerticalNSafe = State.VerticalHitWall(getY()</span><span class="s0">, </span><span class="s1">getBattleFieldHeight())</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] state = {heading</span><span class="s0">, </span><span class="s1">targetDistance</span><span class="s0">, </span><span class="s1">targetBearing</span><span class="s0">, </span><span class="s1">HorizontalNSafe</span><span class="s0">, </span><span class="s1">VerticalNSafe</span><span class="s0">,</span><span class="s1">isHitByBullet}</span><span class="s0">;</span>
         <span class="s0">return </span><span class="s1">state</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">private void </span><span class="s1">radarMovement(Target target)</span>
-    <span class="s1">{</span>
+    <span class="s0">private void </span><span class="s1">radarMovement(Target target) {</span>
         <span class="s0">double </span><span class="s1">radarOffset</span><span class="s0">;</span>
         <span class="s0">if </span><span class="s1">(getTime() - target.currentTime &gt; </span><span class="s2">4</span><span class="s1">) {</span>
-            <span class="s1">radarOffset = </span><span class="s2">4</span><span class="s1">*Math.PI</span><span class="s0">;</span>
+            <span class="s1">radarOffset = </span><span class="s2">4 </span><span class="s1">* Math.PI</span><span class="s0">;</span>
         <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
 
-            <span class="s1">radarOffset = getRadarHeadingRadians() - (Math.PI/</span><span class="s2">2 </span><span class="s1">- Math.atan2(target.y - getY()</span><span class="s0">,</span><span class="s1">target.x - getX()))</span><span class="s0">;</span>
+            <span class="s1">radarOffset = getRadarHeadingRadians() - (Math.PI / </span><span class="s2">2 </span><span class="s1">- Math.atan2(target.y - getY()</span><span class="s0">, </span><span class="s1">target.x - getX()))</span><span class="s0">;</span>
 
             <span class="s1">radarOffset = NormaliseBearing(radarOffset)</span><span class="s0">;</span>
             <span class="s0">if </span><span class="s1">(radarOffset &lt; </span><span class="s2">0</span><span class="s1">)</span>
-                <span class="s1">radarOffset -= Math.PI/</span><span class="s2">10</span><span class="s0">;</span>
+                <span class="s1">radarOffset -= Math.PI / </span><span class="s2">10</span><span class="s0">;</span>
             <span class="s0">else</span>
-                <span class="s1">radarOffset += Math.PI/</span><span class="s2">10</span><span class="s0">;</span>
+                <span class="s1">radarOffset += Math.PI / </span><span class="s2">10</span><span class="s0">;</span>
         <span class="s1">}</span>
         <span class="s1">setTurnRadarLeftRadians(radarOffset)</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">private void </span><span class="s1">gunMovement()</span>
-    <span class="s1">{</span>
+    <span class="s0">private void </span><span class="s1">gunMovement() {</span>
         <span class="s0">long </span><span class="s1">time</span><span class="s0">;</span>
         <span class="s0">long </span><span class="s1">nextTime</span><span class="s0">;</span>
         <span class="s1">Point2D.Double p</span><span class="s0">;</span>
         <span class="s1">p = </span><span class="s0">new </span><span class="s1">Point2D.Double(target.x</span><span class="s0">, </span><span class="s1">target.y)</span><span class="s0">;</span>
-        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i = </span><span class="s2">0</span><span class="s0">; </span><span class="s1">i &lt; </span><span class="s2">20</span><span class="s0">; </span><span class="s1">i++)</span>
-        <span class="s1">{</span>
-            <span class="s1">nextTime = (</span><span class="s0">int</span><span class="s1">)Math.round((getrange(getX()</span><span class="s0">,</span><span class="s1">getY()</span><span class="s0">,</span><span class="s1">p.x</span><span class="s0">,</span><span class="s1">p.y)/(</span><span class="s2">20</span><span class="s1">-(</span><span class="s2">3</span><span class="s1">*firePower))))</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i = </span><span class="s2">0</span><span class="s0">; </span><span class="s1">i &lt; </span><span class="s2">20</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s1">nextTime = (</span><span class="s0">int</span><span class="s1">) Math.round((getrange(getX()</span><span class="s0">, </span><span class="s1">getY()</span><span class="s0">, </span><span class="s1">p.x</span><span class="s0">, </span><span class="s1">p.y) / (</span><span class="s2">20 </span><span class="s1">- (</span><span class="s2">3 </span><span class="s1">* firePower))))</span><span class="s0">;</span>
             <span class="s1">time = getTime() + nextTime - </span><span class="s2">10</span><span class="s0">;</span>
             <span class="s1">p = target.guessPosition(time)</span><span class="s0">;</span>
         <span class="s1">}</span>
-        <span class="s0">double </span><span class="s1">gunOffset = getGunHeadingRadians() - (Math.PI/</span><span class="s2">2 </span><span class="s1">- Math.atan2(p.y - getY()</span><span class="s0">,</span><span class="s1">p.x -  getX()))</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">gunOffset = getGunHeadingRadians() - (Math.PI / </span><span class="s2">2 </span><span class="s1">- Math.atan2(p.y - getY()</span><span class="s0">, </span><span class="s1">p.x - getX()))</span><span class="s0">;</span>
         <span class="s1">setTurnGunLeftRadians(NormaliseBearing(gunOffset))</span><span class="s0">;</span>
     <span class="s1">}</span>
 
     <span class="s0">double </span><span class="s1">NormaliseBearing(</span><span class="s0">double </span><span class="s1">ang) {</span>
         <span class="s0">if </span><span class="s1">(ang &gt; Math.PI)</span>
-            <span class="s1">ang -= </span><span class="s2">2</span><span class="s1">*Math.PI</span><span class="s0">;</span>
+            <span class="s1">ang -= </span><span class="s2">2 </span><span class="s1">* Math.PI</span><span class="s0">;</span>
         <span class="s0">if </span><span class="s1">(ang &lt; -Math.PI)</span>
-            <span class="s1">ang += </span><span class="s2">2</span><span class="s1">*Math.PI</span><span class="s0">;</span>
+            <span class="s1">ang += </span><span class="s2">2 </span><span class="s1">* Math.PI</span><span class="s0">;</span>
         <span class="s0">return </span><span class="s1">ang</span><span class="s0">;</span>
     <span class="s1">}</span>
 
 
-    <span class="s0">public double </span><span class="s1">getrange( </span><span class="s0">double </span><span class="s1">x1</span><span class="s0">,double </span><span class="s1">y1</span><span class="s0">, double </span><span class="s1">x2</span><span class="s0">,double </span><span class="s1">y2 )</span>
-    <span class="s1">{</span>
-        <span class="s0">double </span><span class="s1">xo = x2-x1</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">yo = y2-y1</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">h = Math.sqrt( xo*xo + yo*yo )</span><span class="s0">;</span>
+    <span class="s0">public double </span><span class="s1">getrange(</span><span class="s0">double </span><span class="s1">x1</span><span class="s0">, double </span><span class="s1">y1</span><span class="s0">, double </span><span class="s1">x2</span><span class="s0">, double </span><span class="s1">y2) {</span>
+        <span class="s0">double </span><span class="s1">xo = x2 - x1</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">yo = y2 - y1</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">h = Math.sqrt(xo * xo + yo * yo)</span><span class="s0">;</span>
         <span class="s0">return </span><span class="s1">h</span><span class="s0">;</span>
     <span class="s1">}</span>
 
 
-    <span class="s0">public void </span><span class="s1">onBulletHit(BulletHitEvent e)</span>
-    <span class="s1">{</span>
-        <span class="s0">if </span><span class="s1">(target.name == e.getName())</span>
-        <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">onBulletHit(BulletHitEvent e) {</span>
+        <span class="s0">if </span><span class="s1">(target.name.equals(e.getName())) {</span>
 
-            <span class="s0">double </span><span class="s1">change = e.getBullet().getPower() * </span><span class="s2">9</span><span class="s0">;</span>
-            <span class="s1">immediatereward += change</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">change = e.getBullet().getPower() * </span><span class="s2">10</span><span class="s0">;</span>
+            <span class="s1">immediateReward += change</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
 
-    <span class="s0">public void </span><span class="s1">onBulletMissed(BulletMissedEvent e)</span>
-    <span class="s1">{</span>
-        <span class="s0">double </span><span class="s1">change = -e.getBullet().getPower()</span><span class="s0">;</span>
-        <span class="s1">immediatereward += change</span><span class="s0">;</span>
+    <span class="s0">public void </span><span class="s1">onBulletMissed(BulletMissedEvent e) {</span>
+        <span class="s0">double </span><span class="s1">change = -e.getBullet().getPower() * </span><span class="s2">4</span><span class="s0">;</span>
+        <span class="s1">immediateReward += change</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onHitByBullet(HitByBulletEvent e)</span>
-    <span class="s1">{</span>
-        <span class="s0">if </span><span class="s1">(target.name == e.getName())</span>
-        <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">onHitByBullet(HitByBulletEvent e) {</span>
+        <span class="s0">if </span><span class="s1">(target.name.equals(e.getName())) {</span>
             <span class="s0">double </span><span class="s1">power = e.getBullet().getPower()</span><span class="s0">;</span>
-            <span class="s0">double </span><span class="s1">change = -(</span><span class="s2">4 </span><span class="s1">* power + </span><span class="s2">2 </span><span class="s1">* (power - </span><span class="s2">1</span><span class="s1">))</span><span class="s0">;</span>
-            <span class="s1">immediatereward += change</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">change = -</span><span class="s2">8 </span><span class="s1">* power</span><span class="s0">;</span>
+            <span class="s1">immediateReward += change</span><span class="s0">;</span>
         <span class="s1">}</span>
         <span class="s1">isHitByBullet = </span><span class="s2">1</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onHitRobot(HitRobotEvent e)</span>
-    <span class="s1">{</span>
-        <span class="s0">if </span><span class="s1">(target.name == e.getName())</span>
-        <span class="s1">{</span>
-            <span class="s0">double </span><span class="s1">change = -</span><span class="s2">6.0</span><span class="s0">;</span>
-            <span class="s1">immediatereward += change</span><span class="s0">;</span>
+    <span class="s0">public void </span><span class="s1">onHitRobot(HitRobotEvent e) {</span>
+        <span class="s0">if </span><span class="s1">(target.name.equals(e.getName())) {</span>
+            <span class="s0">double </span><span class="s1">change = -</span><span class="s2">4.0</span><span class="s0">;</span>
+            <span class="s1">immediateReward += change</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onHitWall(HitWallEvent e)</span>
-    <span class="s1">{</span>
-
-        <span class="s0">double </span><span class="s1">change = -(Math.abs(getVelocity()) * </span><span class="s2">0.5 </span><span class="s1">- </span><span class="s2">1</span><span class="s1">)</span><span class="s0">;</span>
-        <span class="s1">immediatereward += change</span><span class="s0">;</span>
-        <span class="s1">isHitWall = </span><span class="s2">1</span><span class="s0">;</span>
+    <span class="s0">public void </span><span class="s1">onHitWall(HitWallEvent e) {</span>
+        <span class="s0">double </span><span class="s1">change = -</span><span class="s2">2</span><span class="s0">;</span>
+        <span class="s1">immediateReward += change</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s4">/**</span>
-     <span class="s4">* onScannedRobot: What to do when you see another robot</span>
-     <span class="s4">*/</span>
-    <span class="s0">public void </span><span class="s1">onScannedRobot(ScannedRobotEvent e)</span>
-    <span class="s1">{</span>
-        <span class="s0">if </span><span class="s1">((e.getDistance() &lt; target.distance)||(target.name == e.getName()))</span>
-        <span class="s1">{</span>
-            <span class="s0">double </span><span class="s1">absbearing_rad = (getHeadingRadians()+e.getBearingRadians())%(</span><span class="s2">2</span><span class="s1">*Math.PI)</span><span class="s0">;</span>
+    <span class="s3">/**</span>
+     <span class="s3">* onScannedRobot: What to do when you see another robot</span>
+     <span class="s3">*/</span>
+    <span class="s0">public void </span><span class="s1">onScannedRobot(ScannedRobotEvent e) {</span>
+        <span class="s1">found = </span><span class="s0">true;</span>
+        <span class="s1">oppoDist = e.getDistance()</span><span class="s0">;</span>
+        <span class="s1">oppoBearing = e.getBearing()</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">((e.getDistance() &lt; target.distance) || (target.name.equals(e.getName()))) {</span>
+            <span class="s0">double </span><span class="s1">absbearing_rad = (getHeadingRadians() + e.getBearingRadians()) % (</span><span class="s2">2 </span><span class="s1">* Math.PI)</span><span class="s0">;</span>
             <span class="s1">target.name = e.getName()</span><span class="s0">;</span>
             <span class="s0">double </span><span class="s1">h = NormaliseBearing(e.getHeadingRadians() - target.heading)</span><span class="s0">;</span>
-            <span class="s1">h = h/(getTime() - target.currentTime)</span><span class="s0">;</span>
+            <span class="s1">h = h / (getTime() - target.currentTime)</span><span class="s0">;</span>
             <span class="s1">target.changehead = h</span><span class="s0">;</span>
-            <span class="s1">target.x = getX()+Math.sin(absbearing_rad)*e.getDistance()</span><span class="s0">; </span>
-            <span class="s1">target.y = getY()+Math.cos(absbearing_rad)*e.getDistance()</span><span class="s0">; </span>
+            <span class="s1">target.x = getX() + Math.sin(absbearing_rad) * e.getDistance()</span><span class="s0">;</span>
+            <span class="s1">target.y = getY() + Math.cos(absbearing_rad) * e.getDistance()</span><span class="s0">;</span>
             <span class="s1">target.bearing = e.getBearingRadians()</span><span class="s0">;</span>
             <span class="s1">target.heading = e.getHeadingRadians()</span><span class="s0">;</span>
-            <span class="s1">target.currentTime = getTime()</span><span class="s0">;			</span>
+            <span class="s1">target.currentTime = getTime()</span><span class="s0">;</span>
             <span class="s1">target.speed = e.getVelocity()</span><span class="s0">;</span>
             <span class="s1">target.distance = e.getDistance()</span><span class="s0">;</span>
             <span class="s1">target.energy = e.getEnergy()</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onRobotDeath(RobotDeathEvent e)</span>
-    <span class="s1">{</span>
-
-        <span class="s0">if </span><span class="s1">(e.getName() == target.name)</span>
+    <span class="s0">public void </span><span class="s1">onRobotDeath(RobotDeathEvent e) {</span>
+        <span class="s0">if </span><span class="s1">(e.getName().equals(target.name))</span>
             <span class="s1">target.distance = </span><span class="s2">10000</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onWin(WinEvent event)</span>
-    <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">onWin(WinEvent event) {</span>
+        <span class="s1">accumulateReward +=</span><span class="s2">100</span><span class="s0">;</span>
         <span class="s1">saveData()</span><span class="s0">;</span>
         <span class="s1">System.out.println(</span><span class="s5">&quot;Win!&quot;</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s1">System.out.println(</span><span class="s5">&quot;Reward is&quot;</span><span class="s1">+accumulateReward)</span><span class="s0">;</span>
+        <span class="s0">int </span><span class="s1">winningFlag=</span><span class="s2">1</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">onDeath(DeathEvent event)</span>
-    <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">onDeath(DeathEvent event) {</span>
+        <span class="s1">accumulateReward -=</span><span class="s2">100</span><span class="s0">;</span>
         <span class="s1">saveData()</span><span class="s0">;</span>
         <span class="s1">System.out.println(</span><span class="s5">&quot;Lose!&quot;</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s1">System.out.println(</span><span class="s5">&quot;Reward is&quot;</span><span class="s1">+accumulateReward)</span><span class="s0">;</span>
+        <span class="s0">int </span><span class="s1">losingFlag=</span><span class="s2">0</span><span class="s0">;</span>
+<span class="s4">//        PrintStream w = null;</span>
+<span class="s4">//        try {</span>
+<span class="s4">//            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(&quot;battle_history.dat&quot;).getAbsolutePath(), true));</span>
+<span class="s4">//            w.println(accumulateReward +&quot; \t&quot;+getRoundNum()+&quot; \t&quot;+losingFlag+&quot; \t&quot;+Learner.ExploitationRate);</span>
+<span class="s4">//            if (w.checkError())</span>
+<span class="s4">//                System.out.println(&quot;Could not save the data!&quot;);</span>
+<span class="s4">//            w.close();</span>
+<span class="s4">//        }</span>
+<span class="s4">//        catch (IOException e) {</span>
+<span class="s4">//            System.out.println(&quot;IOException trying to write: &quot; + e);</span>
+<span class="s4">//        }</span>
+<span class="s4">//        finally {</span>
+<span class="s4">//            try {</span>
+<span class="s4">//                if (w != null)</span>
+<span class="s4">//                    w.close();</span>
+<span class="s4">//            }</span>
+<span class="s4">//            catch (Exception e) {</span>
+<span class="s4">//                System.out.println(&quot;Exception trying to close writer: &quot; + e);</span>
+<span class="s4">//            }</span>
+<span class="s4">//        }</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">loadData()</span>
-    <span class="s1">{</span>
-        <span class="s0">try</span>
-        <span class="s1">{</span>
-            <span class="s1">File file = getDataFile(</span><span class="s5">&quot;lut3.txt&quot;</span><span class="s1">)</span><span class="s0">;</span>
-            <span class="s1">lut.load(file)</span><span class="s0">;</span>
-
-
-        <span class="s1">}</span>
-        <span class="s0">catch </span><span class="s1">(Exception e)</span>
-        <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">loadData() {</span>
+        <span class="s0">try </span><span class="s1">{</span>
+            <span class="s1">File file = getDataFile(</span><span class="s5">&quot;weightlist4.txt&quot;</span><span class="s1">)</span><span class="s0">;</span>
+            <span class="s1">learner.BPLUT1.load(file)</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">catch </span><span class="s1">(Exception e) {</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">saveData()</span>
-    <span class="s1">{</span>
-        <span class="s0">try</span>
-        <span class="s1">{</span>
-            <span class="s1">File file = getDataFile(</span><span class="s5">&quot;lut3.txt&quot;</span><span class="s1">)</span><span class="s0">;</span>
-            <span class="s1">lut.saveData(file)</span><span class="s0">;</span>
-
-        <span class="s1">}</span>
-        <span class="s0">catch </span><span class="s1">(Exception e)</span>
-        <span class="s1">{</span>
+    <span class="s0">public void </span><span class="s1">saveData() {</span>
+        <span class="s0">try </span><span class="s1">{</span>
+            <span class="s1">File file = getDataFile(</span><span class="s5">&quot;weightlist4.txt&quot;</span><span class="s1">)</span><span class="s0">;</span>
+            <span class="s1">learner.BPLUT1.save(file)</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">catch </span><span class="s1">(Exception e) {</span>
             <span class="s1">out.println(</span><span class="s5">&quot;Exception trying to write: &quot; </span><span class="s1">+ e)</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
-
-
 <span class="s1">}</span>
 </pre>
 </body>

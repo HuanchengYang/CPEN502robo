@@ -6,6 +6,7 @@
 .s0 { color: #cc7832;}
 .s1 { color: #a9b7c6;}
 .s2 { color: #6897bb;}
+.s3 { color: #808080;}
 </style>
 </head>
 <body bgcolor="#2b2b2b">
@@ -19,43 +20,33 @@ State.java</font>
 <span class="s0">public class </span><span class="s1">State {</span>
 
     <span class="s0">public static final int </span><span class="s1">NumHeading = </span><span class="s2">4</span><span class="s0">;</span>
-    <span class="s0">public static final int </span><span class="s1">NumTargetDistance = </span><span class="s2">20</span><span class="s0">;</span>
+    <span class="s0">public static final int </span><span class="s1">NumTargetDistance = </span><span class="s2">10</span><span class="s0">;</span>
     <span class="s0">public static final int </span><span class="s1">NumTargetBearing = </span><span class="s2">4</span><span class="s0">;</span>
-    <span class="s0">public static final int </span><span class="s1">numMyEnergy = </span><span class="s2">10</span><span class="s0">;</span>
-    <span class="s0">public static final int </span><span class="s1">numEnemyEnergy = </span><span class="s2">10</span><span class="s0">;</span>
+    <span class="s0">public static final int </span><span class="s1">NumHorizontalHitWall = </span><span class="s2">2</span><span class="s0">;</span>
+    <span class="s0">public static final int </span><span class="s1">NumVerticalHitWall = </span><span class="s2">2</span><span class="s0">;</span>
+    <span class="s0">public static final int </span><span class="s1">NumIsHit = </span><span class="s2">2</span><span class="s0">;</span>
+    <span class="s0">public static final int </span><span class="s1">NumofState = NumHeading*NumTargetDistance*NumTargetBearing*NumHorizontalHitWall*NumVerticalHitWall*NumIsHit</span><span class="s0">;</span>
 
 
     <span class="s0">public static double </span><span class="s1">getHeading(</span><span class="s0">double </span><span class="s1">heading)</span>
     <span class="s1">{</span>
         <span class="s0">double </span><span class="s1">angle = </span><span class="s2">360 </span><span class="s1">/ NumHeading</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">newHeadingAngle = heading + angle / </span><span class="s2">2</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">HeadingAngleinRad = newHeadingAngle/</span><span class="s2">180 </span><span class="s1">* Math.PI</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">sine = Math.sin(HeadingAngleinRad)</span><span class="s0">;</span>
-        <span class="s0">double </span><span class="s1">cosine = Math.cos(HeadingAngleinRad)</span><span class="s0">;</span>
-        <span class="s0">if </span><span class="s1">(sine&gt;=</span><span class="s2">0</span><span class="s1">){</span>
-            <span class="s0">if </span><span class="s1">(cosine&gt;=</span><span class="s2">0</span><span class="s1">){</span>
-                <span class="s0">return </span><span class="s2">0</span><span class="s0">;</span>
-            <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
-                <span class="s0">return </span><span class="s2">1</span><span class="s0">;</span>
-            <span class="s1">}</span>
-        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
-            <span class="s0">if </span><span class="s1">(cosine&lt;</span><span class="s2">0</span><span class="s1">){</span>
-                <span class="s0">return </span><span class="s2">2</span><span class="s0">;</span>
-            <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
-                <span class="s0">return </span><span class="s2">3</span><span class="s0">;</span>
-            <span class="s1">}</span>
-        <span class="s1">}</span>
+        <span class="s0">double </span><span class="s1">newHeading = heading + angle / </span><span class="s2">2</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">(newHeading &gt; </span><span class="s2">360.0</span><span class="s1">)</span>
+            <span class="s1">newHeading -= </span><span class="s2">360.0</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">(newHeading / angle)</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public static int </span><span class="s1">getTargetDistance(</span><span class="s0">double </span><span class="s1">value)</span>
+    <span class="s0">public static double </span><span class="s1">getTargetDistance(</span><span class="s0">double </span><span class="s1">value)</span>
     <span class="s1">{</span>
-        <span class="s0">int </span><span class="s1">distance = (</span><span class="s0">int</span><span class="s1">)(value / </span><span class="s2">30.0</span><span class="s1">)</span><span class="s0">;</span>
+        <span class="s3">//int distance = (int)(value / (1000/NumTargetDistance));</span>
+        <span class="s0">double </span><span class="s1">distance = (value / (</span><span class="s2">1000</span><span class="s1">/NumTargetDistance))</span><span class="s0">;</span>
         <span class="s0">if </span><span class="s1">(distance &gt; NumTargetDistance - </span><span class="s2">1</span><span class="s1">)</span>
             <span class="s1">distance = NumTargetDistance - </span><span class="s2">1</span><span class="s0">;</span>
         <span class="s0">return </span><span class="s1">distance</span><span class="s0">;</span>
     <span class="s1">}</span>
 
-    <span class="s0">public static int </span><span class="s1">getTargetBearing(</span><span class="s0">double </span><span class="s1">bearing)</span>
+    <span class="s0">public static double </span><span class="s1">getTargetBearing(</span><span class="s0">double </span><span class="s1">bearing)</span>
     <span class="s1">{</span>
         <span class="s0">double </span><span class="s1">PIx2 = Math.PI * </span><span class="s2">2</span><span class="s0">;</span>
         <span class="s0">if </span><span class="s1">(bearing &lt; </span><span class="s2">0</span><span class="s1">)</span>
@@ -64,12 +55,28 @@ State.java</font>
         <span class="s0">double </span><span class="s1">newBearing = bearing + angle / </span><span class="s2">2</span><span class="s0">;</span>
         <span class="s0">if </span><span class="s1">(newBearing &gt; PIx2)</span>
             <span class="s1">newBearing -= PIx2</span><span class="s0">;</span>
-        <span class="s0">return </span><span class="s1">(</span><span class="s0">int</span><span class="s1">)(newBearing / angle)</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">(newBearing / angle)</span><span class="s0">;</span>
     <span class="s1">}</span>
 
+    <span class="s0">public static int </span><span class="s1">HorizontalHitWall(</span><span class="s0">double </span><span class="s1">robotX</span><span class="s0">, double </span><span class="s1">BattleFieldX)  {</span>
+        <span class="s0">int </span><span class="s1">distanceToCenterH</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">(robotX &gt; </span><span class="s2">50 </span><span class="s1">&amp;&amp; robotX &lt; BattleFieldX-</span><span class="s2">50 </span><span class="s1">) {</span>
+            <span class="s1">distanceToCenterH = </span><span class="s2">0</span><span class="s0">;	</span><span class="s3">// Safe</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+            <span class="s1">distanceToCenterH = </span><span class="s2">1</span><span class="s0">;	</span><span class="s3">// unSafe, too close to wall</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">distanceToCenterH</span><span class="s0">;</span>
+    <span class="s1">}</span>
 
-
-
+    <span class="s0">public static int </span><span class="s1">VerticalHitWall(</span><span class="s0">double </span><span class="s1">robotY</span><span class="s0">, double </span><span class="s1">BattleFieldY)  {</span>
+        <span class="s0">int </span><span class="s1">distanceToCenterV</span><span class="s0">;</span>
+        <span class="s0">if </span><span class="s1">(robotY &gt; </span><span class="s2">50 </span><span class="s1">&amp;&amp; robotY &lt; BattleFieldY-</span><span class="s2">50 </span><span class="s1">) {</span>
+            <span class="s1">distanceToCenterV = </span><span class="s2">0</span><span class="s0">;	</span><span class="s3">// Safe</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+            <span class="s1">distanceToCenterV = </span><span class="s2">1</span><span class="s0">;	</span><span class="s3">// unSafe, too close to wall</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">distanceToCenterV</span><span class="s0">;</span>
+    <span class="s1">}</span>
 <span class="s1">}</span></pre>
 </body>
 </html>

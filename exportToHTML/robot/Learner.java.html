@@ -5,8 +5,9 @@
 <style type="text/css">
 .s0 { color: #cc7832;}
 .s1 { color: #a9b7c6;}
-.s2 { color: #6897bb;}
-.s3 { color: #808080;}
+.s2 { color: #808080;}
+.s3 { color: #6897bb;}
+.s4 { color: #6a8759;}
 </style>
 </head>
 <body bgcolor="#2b2b2b">
@@ -18,42 +19,317 @@ Learner.java</font>
 <pre><span class="s0">package </span><span class="s1">robot</span><span class="s0">;</span>
 
 <span class="s0">import </span><span class="s1">LUT.LUT</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">NeuralNetwork.BackPropagationLUT</span><span class="s0">;</span>
+<span class="s2">//import NeuralNet.NeuralNet;</span>
+
+<span class="s0">import </span><span class="s1">java.io.File</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.io.IOException</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.util.ArrayList</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.util.HashMap</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.util.List</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.util.Random</span><span class="s0">;</span>
+
 
 <span class="s0">public class </span><span class="s1">Learner {</span>
-    <span class="s0">public static final double </span><span class="s1">LearningRate = </span><span class="s2">0.1</span><span class="s0">;</span>
-    <span class="s0">public static final double </span><span class="s1">DiscountRate = </span><span class="s2">0.9</span><span class="s0">;</span>
-    <span class="s0">public static final double </span><span class="s1">ExploitationRate = </span><span class="s2">1</span><span class="s0">;</span>
+    <span class="s0">public static final double </span><span class="s1">LearningRate = </span><span class="s3">0.1</span><span class="s0">;</span>
+    <span class="s0">public static final double </span><span class="s1">DiscountRate = </span><span class="s3">0.2</span><span class="s0">;</span>
     <span class="s0">private boolean </span><span class="s1">initialize = </span><span class="s0">true;</span>
     <span class="s0">private </span><span class="s1">LUT lut</span><span class="s0">;</span>
+    <span class="s0">private static int </span><span class="s1">typeofState = </span><span class="s3">6</span><span class="s0">;</span>
+    <span class="s0">private static int </span><span class="s1">typeofAction = </span><span class="s3">5</span><span class="s0">;</span>
 
-    <span class="s0">public </span><span class="s1">Learner(LUT lut)</span>
-    <span class="s1">{</span>
+    <span class="s2">//private ArrayList&lt;NeuralNet&gt; neuralNetworks = new ArrayList&lt;NeuralNet&gt;();</span>
+
+    <span class="s0">private double</span><span class="s1">[] currentStateArray = </span><span class="s0">new double</span><span class="s1">[typeofState]</span><span class="s0">;</span>
+    <span class="s0">private double</span><span class="s1">[] newStateArray = </span><span class="s0">new double</span><span class="s1">[typeofState]</span><span class="s0">;</span>
+    <span class="s0">private double</span><span class="s1">[] currentActionArray = </span><span class="s0">new double</span><span class="s1">[typeofAction]</span><span class="s0">;</span>
+    <span class="s0">private double</span><span class="s1">[] newActionArray = </span><span class="s0">new double</span><span class="s1">[typeofAction]</span><span class="s0">;</span>
+    <span class="s0">private double</span><span class="s1">[] currentActionQ = </span><span class="s0">new double</span><span class="s1">[Action.NumRobotActions]</span><span class="s0">;</span>
+    <span class="s0">private double</span><span class="s1">[] newActionQ = </span><span class="s0">new double</span><span class="s1">[Action.NumRobotActions]</span><span class="s0">;</span>
+    <span class="s0">private double </span><span class="s1">qError[][] = </span><span class="s0">new double</span><span class="s1">[State.NumofState][Action.NumRobotActions]</span><span class="s0">;</span>
+
+
+    <span class="s1">HashMap&lt;StateArray</span><span class="s0">, </span><span class="s1">Double&gt; DoublestateMap = </span><span class="s0">new </span><span class="s1">HashMap&lt;StateArray</span><span class="s0">, </span><span class="s1">Double&gt;()</span><span class="s0">;</span>
+    <span class="s1">HashMap&lt;ActionArray</span><span class="s0">, </span><span class="s1">Double&gt; DoubleactionMap = </span><span class="s0">new </span><span class="s1">HashMap&lt;ActionArray</span><span class="s0">, </span><span class="s1">Double&gt;()</span><span class="s0">;</span>
+    <span class="s1">HashMap&lt;Double</span><span class="s0">, double</span><span class="s1">[]&gt; ArraystateMap = </span><span class="s0">new </span><span class="s1">HashMap&lt;Double</span><span class="s0">, double</span><span class="s1">[]&gt;()</span><span class="s0">;</span>
+    <span class="s1">HashMap&lt;Double</span><span class="s0">, double</span><span class="s1">[]&gt; ArrayactionMap = </span><span class="s0">new </span><span class="s1">HashMap&lt;Double</span><span class="s0">, double</span><span class="s1">[]&gt;()</span><span class="s0">;</span>
+
+    <span class="s0">public </span><span class="s1">BackPropagationLUT BPLUT1</span><span class="s0">;</span>
+
+
+    <span class="s0">public </span><span class="s1">Learner(LUT lut) {</span>
         <span class="s0">this</span><span class="s1">.lut = lut</span><span class="s0">;</span>
+        <span class="s1">initializeActionHash()</span><span class="s0">;</span>
+        <span class="s1">initializeStateHash()</span><span class="s0">;</span>
+
     <span class="s1">}</span>
 
-    <span class="s0">public void </span><span class="s1">learn(</span><span class="s0">double </span><span class="s1">stateandaction[]</span><span class="s0">,double </span><span class="s1">newstate[]</span><span class="s0">, double </span><span class="s1">immediateReward)</span>
-    <span class="s1">{</span>
-        <span class="s0">double</span><span class="s1">[] oldstate = </span><span class="s0">new double</span><span class="s1">[</span><span class="s2">5</span><span class="s1">]</span><span class="s0">;</span>
-        <span class="s1">immediateReward=</span><span class="s2">0</span><span class="s0">;</span>
-        <span class="s1">oldstate[</span><span class="s2">0</span><span class="s1">]=stateandaction[</span><span class="s2">0</span><span class="s1">]</span><span class="s0">;</span>
-        <span class="s1">oldstate[</span><span class="s2">1</span><span class="s1">]=stateandaction[</span><span class="s2">1</span><span class="s1">]</span><span class="s0">;</span>
-        <span class="s1">oldstate[</span><span class="s2">2</span><span class="s1">]=stateandaction[</span><span class="s2">2</span><span class="s1">]</span><span class="s0">;</span>
-        <span class="s1">oldstate[</span><span class="s2">3</span><span class="s1">]=stateandaction[</span><span class="s2">3</span><span class="s1">]</span><span class="s0">;</span>
-        <span class="s1">oldstate[</span><span class="s2">4</span><span class="s1">]=stateandaction[</span><span class="s2">4</span><span class="s1">]</span><span class="s0">;</span>
+    <span class="s0">public </span><span class="s1">Learner() {</span>
+        <span class="s1">BPLUT1 = </span><span class="s0">new </span><span class="s1">BackPropagationLUT()</span><span class="s0">;</span>
 
-        <span class="s3">//System.out.println(&quot;Reinforcement: &quot; + immediateReward);</span>
-        <span class="s0">if </span><span class="s1">(initialize)</span>
+        <span class="s1">initializeActionHash()</span><span class="s0">;</span>
+        <span class="s1">initializeStateHash()</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s2">//Off-Policy</span>
+    <span class="s0">public void </span><span class="s1">learnOffPolicy(</span><span class="s0">double </span><span class="s1">newstate[]</span><span class="s0">, double </span><span class="s1">newaction[]</span><span class="s0">, double </span><span class="s1">immediateReward) {</span>
+        <span class="s0">if </span><span class="s1">(initialize) {</span>
             <span class="s1">initialize = </span><span class="s0">false;</span>
-        <span class="s0">else</span>
-        <span class="s1">{</span>
-            <span class="s0">double </span><span class="s1">oldQValue = lut.outputFor(stateandaction)</span><span class="s0">;</span>
-            <span class="s0">double </span><span class="s1">newQValue = (</span><span class="s2">1 </span><span class="s1">- LearningRate) * oldQValue + LearningRate * (immediateReward + DiscountRate * lut.outputFor(lut.getMaximumQ(oldstate)))</span><span class="s0">;</span>
-            <span class="s0">double </span><span class="s1">convergence = newQValue-oldQValue</span><span class="s0">;</span>
-            <span class="s3">//System.out.println(&quot;convergence is&quot;+ convergence);</span>
-            <span class="s1">lut.train(stateandaction</span><span class="s0">, </span><span class="s1">newQValue)</span><span class="s0">;</span>
+            <span class="s1">currentStateArray = newstate</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = newaction</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+
+            <span class="s0">double </span><span class="s1">oldStateInt = convertArrayStatetoInt(currentStateArray)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newStateInt = convertArrayStatetoInt(newstate)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">oldActionInt = convertArrayActiontoInt(currentActionArray)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newActionInt = convertArrayActiontoInt(newaction)</span><span class="s0">;</span>
+
+            <span class="s0">double </span><span class="s1">oldQValue = lut.getQValue(oldStateInt</span><span class="s0">, </span><span class="s1">oldActionInt)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newQValue = (</span><span class="s3">1 </span><span class="s1">- LearningRate) * oldQValue + LearningRate * (immediateReward + DiscountRate * lut.getMaximumQ(newStateInt))</span><span class="s0">;</span>
+            <span class="s1">lut.trainTable(oldStateInt</span><span class="s0">, </span><span class="s1">oldActionInt</span><span class="s0">, </span><span class="s1">newQValue)</span><span class="s0">;</span>
+            <span class="s1">currentStateArray = newstate</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = newaction</span><span class="s0">;</span>
         <span class="s1">}</span>
     <span class="s1">}</span>
 
+    <span class="s2">//On Policy</span>
+    <span class="s0">public void </span><span class="s1">learnOnPolicy(</span><span class="s0">double </span><span class="s1">newstate[]</span><span class="s0">, double </span><span class="s1">newaction[]</span><span class="s0">, double </span><span class="s1">immediateReward) {</span>
+        <span class="s0">if </span><span class="s1">(initialize) {</span>
+            <span class="s1">initialize = </span><span class="s0">false;</span>
+            <span class="s1">currentStateArray = newstate</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = newaction</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+            <span class="s0">double </span><span class="s1">oldStateInt = convertArrayStatetoInt(currentStateArray)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newStateInt = convertArrayStatetoInt(newstate)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">oldActionInt = convertArrayActiontoInt(currentStateArray)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newActionInt = convertArrayActiontoInt(newaction)</span><span class="s0">;</span>
+
+            <span class="s0">double </span><span class="s1">oldQValue = lut.getQValue(oldStateInt</span><span class="s0">, </span><span class="s1">oldActionInt)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newQValue = (</span><span class="s3">1 </span><span class="s1">- LearningRate) * oldQValue + LearningRate * (immediateReward + DiscountRate * lut.getQValue(newStateInt</span><span class="s0">, </span><span class="s1">newActionInt))</span><span class="s0">;</span>
+            <span class="s1">lut.trainTable(oldStateInt</span><span class="s0">, </span><span class="s1">oldActionInt</span><span class="s0">, </span><span class="s1">newQValue)</span><span class="s0">;</span>
+            <span class="s1">currentStateArray = newstate</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = newaction</span><span class="s0">;</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+
+    <span class="s0">private void </span><span class="s1">initializeStateHash() {</span>
+        <span class="s0">double </span><span class="s1">statecount = </span><span class="s3">0</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt; State.NumHeading</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">j = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">j &lt; State.NumTargetDistance</span><span class="s0">; </span><span class="s1">j++) {</span>
+                <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">k = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">k &lt; State.NumTargetBearing</span><span class="s0">; </span><span class="s1">k++) {</span>
+                    <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">l = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">l &lt; State.NumVerticalHitWall</span><span class="s0">; </span><span class="s1">l++) {</span>
+                        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">m = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">m &lt; State.NumHorizontalHitWall</span><span class="s0">; </span><span class="s1">m++) {</span>
+                            <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">n = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">n &lt; State.NumIsHit</span><span class="s0">; </span><span class="s1">n++) {</span>
+                                <span class="s0">double</span><span class="s1">[] testArray = </span><span class="s0">new double</span><span class="s1">[]{i</span><span class="s0">, </span><span class="s1">j</span><span class="s0">, </span><span class="s1">k</span><span class="s0">, </span><span class="s1">l</span><span class="s0">, </span><span class="s1">m</span><span class="s0">, </span><span class="s1">n}</span><span class="s0">;</span>
+                                <span class="s1">StateArray testStateArray = </span><span class="s0">new </span><span class="s1">StateArray(testArray)</span><span class="s0">;</span>
+                                <span class="s0">this</span><span class="s1">.DoublestateMap.put(testStateArray</span><span class="s0">, </span><span class="s1">statecount)</span><span class="s0">;</span>
+                                <span class="s0">this</span><span class="s1">.ArraystateMap.put(statecount</span><span class="s0">, </span><span class="s1">testArray)</span><span class="s0">;</span>
+                                <span class="s1">statecount++</span><span class="s0">;</span>
+                            <span class="s1">}</span>
+                        <span class="s1">}</span>
+                    <span class="s1">}</span>
+                <span class="s1">}</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+    <span class="s0">private void </span><span class="s1">initializeActionHash() {</span>
+        <span class="s0">double </span><span class="s1">actioncount = </span><span class="s3">0</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt; Action.RobotAhead</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">j = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">j &lt; Action.RobotBack</span><span class="s0">; </span><span class="s1">j++) {</span>
+                <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">k = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">k &lt; Action.RobotAheadTurnLeft</span><span class="s0">; </span><span class="s1">k++) {</span>
+                    <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">l = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">l &lt; Action.RobotAheadTurnRight</span><span class="s0">; </span><span class="s1">l++) {</span>
+                        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">m = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">m &lt; Action.RobotFire</span><span class="s0">; </span><span class="s1">m++) {</span>
+                            <span class="s0">double</span><span class="s1">[] testAction = </span><span class="s0">new double</span><span class="s1">[]{i</span><span class="s0">, </span><span class="s1">j</span><span class="s0">, </span><span class="s1">k</span><span class="s0">, </span><span class="s1">l</span><span class="s0">, </span><span class="s1">m}</span><span class="s0">;</span>
+                            <span class="s1">ActionArray testActionArray = </span><span class="s0">new </span><span class="s1">ActionArray(testAction)</span><span class="s0">;</span>
+                            <span class="s0">this</span><span class="s1">.DoubleactionMap.put(testActionArray</span><span class="s0">, </span><span class="s1">actioncount)</span><span class="s0">;</span>
+                            <span class="s0">this</span><span class="s1">.ArrayactionMap.put(actioncount</span><span class="s0">, </span><span class="s1">testAction)</span><span class="s0">;</span>
+                            <span class="s1">actioncount++</span><span class="s0">;</span>
+                        <span class="s1">}</span>
+                    <span class="s1">}</span>
+                <span class="s1">}</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double </span><span class="s1">convertArrayStatetoInt(</span><span class="s0">double</span><span class="s1">[] state) {</span>
+        <span class="s1">StateArray stateArray = </span><span class="s0">new </span><span class="s1">StateArray(state)</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">DoublestateMap.get(stateArray)</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double</span><span class="s1">[] convertIntStatetoArray(</span><span class="s0">double </span><span class="s1">state) {</span>
+        <span class="s0">return </span><span class="s1">ArraystateMap.get(state)</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double </span><span class="s1">convertArrayActiontoInt(</span><span class="s0">double</span><span class="s1">[] action) {</span>
+        <span class="s1">ActionArray actionArray = </span><span class="s0">new </span><span class="s1">ActionArray(action)</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">DoubleactionMap.get(actionArray)</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double</span><span class="s1">[] convertIntActiontoArray(</span><span class="s0">double </span><span class="s1">action) {</span>
+        <span class="s0">return </span><span class="s1">ArrayactionMap.get(action)</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+
+
+    <span class="s0">public double</span><span class="s1">[] normalizeInput(</span><span class="s0">double</span><span class="s1">[] state</span><span class="s0">, double</span><span class="s1">[] action) {</span>
+        <span class="s0">double</span><span class="s1">[] normalizedstate = normalizestate(state)</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] normalizedaction = normalizeaction(action)</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] normalizedInput = </span><span class="s0">new double</span><span class="s1">[normalizedstate.length + normalizedaction.length]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt; normalizedInput.length</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s0">if </span><span class="s1">(i &lt; normalizedstate.length) {</span>
+                <span class="s1">normalizedInput[i] = normalizedstate[i]</span><span class="s0">;</span>
+            <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+                <span class="s1">normalizedInput[i] = normalizedaction[i - normalizedstate.length]</span><span class="s0">;</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">normalizedInput</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+    <span class="s0">public static double</span><span class="s1">[] normalizestate(</span><span class="s0">double</span><span class="s1">[] states) {</span>
+        <span class="s0">double</span><span class="s1">[] normalizedStates = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">6</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt; </span><span class="s3">6</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s0">switch </span><span class="s1">(i) {</span>
+                <span class="s0">case </span><span class="s3">0</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">0</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">0</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (State.NumHeading - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">1</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">1</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">1</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (State.NumTargetDistance - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">2</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">2</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">2</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (State.NumTargetBearing - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">3</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">3</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">3</span><span class="s1">] * </span><span class="s3">2.0</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">4</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">4</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">4</span><span class="s1">] * </span><span class="s3">2.0</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">5</span><span class="s1">:</span>
+                    <span class="s1">normalizedStates[</span><span class="s3">5</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ states[</span><span class="s3">5</span><span class="s1">] * </span><span class="s3">2.0</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">default</span><span class="s1">:</span>
+                    <span class="s1">System.out.println(</span><span class="s4">&quot;The data doesn't belong here.&quot;</span><span class="s1">)</span><span class="s0">;</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">normalizedStates</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+
+    <span class="s0">public static double</span><span class="s1">[] normalizeaction(</span><span class="s0">double</span><span class="s1">[] actions) {</span>
+        <span class="s0">double</span><span class="s1">[] normalizedActions = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">int </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt; </span><span class="s3">5</span><span class="s0">; </span><span class="s1">i++) {</span>
+            <span class="s0">switch </span><span class="s1">(i) {</span>
+                <span class="s0">case </span><span class="s3">0</span><span class="s1">:</span>
+                    <span class="s1">normalizedActions[</span><span class="s3">0</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ actions[</span><span class="s3">0</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (Action.RobotAhead - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">1</span><span class="s1">:</span>
+                    <span class="s1">normalizedActions[</span><span class="s3">1</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ actions[</span><span class="s3">1</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (Action.RobotBack - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">2</span><span class="s1">:</span>
+                    <span class="s1">normalizedActions[</span><span class="s3">2</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ actions[</span><span class="s3">2</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (Action.RobotAheadTurnLeft - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">3</span><span class="s1">:</span>
+                    <span class="s1">normalizedActions[</span><span class="s3">3</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ actions[</span><span class="s3">3</span><span class="s1">] * </span><span class="s3">2.0 </span><span class="s1">/ ((</span><span class="s0">double</span><span class="s1">) (Action.RobotAheadTurnRight - </span><span class="s3">1</span><span class="s1">))</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">case </span><span class="s3">4</span><span class="s1">:</span>
+                    <span class="s1">normalizedActions[</span><span class="s3">4</span><span class="s1">] = -</span><span class="s3">1.0 </span><span class="s1">+ actions[</span><span class="s3">4</span><span class="s1">] * </span><span class="s3">2.0</span><span class="s0">;</span>
+                    <span class="s0">break;</span>
+                <span class="s0">default</span><span class="s1">:</span>
+                    <span class="s1">System.out.println(</span><span class="s4">&quot;The data doesn't belong here.&quot;</span><span class="s1">)</span><span class="s0">;</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">normalizedActions</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public void </span><span class="s1">onlineLearning(</span><span class="s0">double</span><span class="s1">[] state</span><span class="s0">, double</span><span class="s1">[] action</span><span class="s0">, double </span><span class="s1">immediateReward) {</span>
+        <span class="s0">if </span><span class="s1">(initialize) {</span>
+            <span class="s1">initialize = </span><span class="s0">false;</span>
+            <span class="s1">currentStateArray = state</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = action</span><span class="s0">;</span>
+        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+            <span class="s0">double</span><span class="s1">[] normalizedOldInput = normalizeInput(currentStateArray</span><span class="s0">, </span><span class="s1">currentActionArray)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">oldQValue = BPLUT1.outputFor(normalizedOldInput)</span><span class="s0">;</span>
+            <span class="s0">double </span><span class="s1">newQValue = (</span><span class="s3">1 </span><span class="s1">- LearningRate) * oldQValue + LearningRate * (immediateReward + DiscountRate * getMaxQ(state))</span><span class="s0">;</span>
+            <span class="s2">//lut.trainTable(oldStateInt,oldActionInt,newQValue);</span>
+            <span class="s1">BPLUT1.updateValueAndRetrain(currentStateArray</span><span class="s0">, </span><span class="s1">currentActionArray</span><span class="s0">, </span><span class="s1">newQValue)</span><span class="s0">;</span>
+            <span class="s1">currentStateArray = state</span><span class="s0">;</span>
+            <span class="s1">currentActionArray = action</span><span class="s0">;</span>
+        <span class="s1">}</span>
+
+    <span class="s1">}</span>
+
+    <span class="s0">public double</span><span class="s1">[] getBestAction(</span><span class="s0">double</span><span class="s1">[] state) {</span>
+        <span class="s0">double</span><span class="s1">[] rawaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">maxQ = -</span><span class="s3">1</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] outputaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">i = i + </span><span class="s3">1</span><span class="s1">) {</span>
+            <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">j = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">j &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">j = j + </span><span class="s3">1</span><span class="s1">) {</span>
+                <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">k = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">k &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">k = k + </span><span class="s3">1</span><span class="s1">) {</span>
+                    <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">l = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">l &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">l = l + </span><span class="s3">1</span><span class="s1">) {</span>
+                        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">m = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">m &lt;= </span><span class="s3">1</span><span class="s0">; </span><span class="s1">m++) {</span>
+                            <span class="s1">rawaction[</span><span class="s3">0</span><span class="s1">] = i</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">1</span><span class="s1">] = j</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">2</span><span class="s1">] = k</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">3</span><span class="s1">] = l</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">4</span><span class="s1">] = m</span><span class="s0">;</span>
+                            <span class="s0">double</span><span class="s1">[] stateandaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">11</span><span class="s1">]</span><span class="s0">;</span>
+                            <span class="s1">stateandaction = normalizeInput(state</span><span class="s0">, </span><span class="s1">rawaction)</span><span class="s0">;</span>
+                            <span class="s0">double </span><span class="s1">Qvalue = BPLUT1.outputFor(stateandaction)</span><span class="s0">;</span>
+                            <span class="s0">if </span><span class="s1">(Qvalue &gt; maxQ) {</span>
+                                <span class="s1">maxQ = Qvalue</span><span class="s0">;</span>
+                                <span class="s1">outputaction = rawaction</span><span class="s0">;</span>
+                            <span class="s1">}</span>
+                        <span class="s1">}</span>
+                    <span class="s1">}</span>
+                <span class="s1">}</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">outputaction</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double </span><span class="s1">getMaxQ(</span><span class="s0">double</span><span class="s1">[] state) {</span>
+        <span class="s0">double</span><span class="s1">[] rawaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">double </span><span class="s1">maxQ = -</span><span class="s3">1</span><span class="s0">;</span>
+        <span class="s0">double</span><span class="s1">[] outputaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">i = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">i &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">i = i +</span><span class="s3">1</span><span class="s1">) {</span>
+            <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">j = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">j &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">j = j + </span><span class="s3">1</span><span class="s1">) {</span>
+                <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">k = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">k &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">k = k + </span><span class="s3">1</span><span class="s1">) {</span>
+                    <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">l = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">l &lt;= </span><span class="s3">5</span><span class="s0">; </span><span class="s1">l = l + </span><span class="s3">1</span><span class="s1">) {</span>
+                        <span class="s0">for </span><span class="s1">(</span><span class="s0">double </span><span class="s1">m = </span><span class="s3">0</span><span class="s0">; </span><span class="s1">m &lt;= </span><span class="s3">1</span><span class="s0">; </span><span class="s1">m++) {</span>
+                            <span class="s1">rawaction[</span><span class="s3">0</span><span class="s1">] = i</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">1</span><span class="s1">] = j</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">2</span><span class="s1">] = k</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">3</span><span class="s1">] = l</span><span class="s0">;</span>
+                            <span class="s1">rawaction[</span><span class="s3">4</span><span class="s1">] = m</span><span class="s0">;</span>
+                            <span class="s0">double</span><span class="s1">[] stateandaction = </span><span class="s0">new double</span><span class="s1">[</span><span class="s3">11</span><span class="s1">]</span><span class="s0">;</span>
+                            <span class="s1">stateandaction = normalizeInput(state</span><span class="s0">, </span><span class="s1">rawaction)</span><span class="s0">;</span>
+                            <span class="s0">double </span><span class="s1">Qvalue = BPLUT1.outputFor(stateandaction)</span><span class="s0">;</span>
+                            <span class="s0">if </span><span class="s1">(Qvalue &gt; maxQ) {</span>
+                                <span class="s1">maxQ = Qvalue</span><span class="s0">;</span>
+                            <span class="s1">}</span>
+                        <span class="s1">}</span>
+                    <span class="s1">}</span>
+                <span class="s1">}</span>
+            <span class="s1">}</span>
+        <span class="s1">}</span>
+        <span class="s0">return </span><span class="s1">maxQ*</span><span class="s3">10</span><span class="s0">;</span>
+    <span class="s1">}</span>
+
+    <span class="s0">public double</span><span class="s1">[] getRandomAction() {</span>
+        <span class="s0">double</span><span class="s1">[] action=</span><span class="s0">new double</span><span class="s1">[</span><span class="s3">5</span><span class="s1">]</span><span class="s0">;</span>
+        <span class="s1">action[</span><span class="s3">0</span><span class="s1">]=Math.random()*</span><span class="s3">5</span><span class="s0">;</span>
+        <span class="s1">action[</span><span class="s3">1</span><span class="s1">]=Math.random()*</span><span class="s3">5</span><span class="s0">;</span>
+        <span class="s1">action[</span><span class="s3">2</span><span class="s1">]=Math.random()*</span><span class="s3">5</span><span class="s0">;</span>
+        <span class="s1">action[</span><span class="s3">3</span><span class="s1">]=Math.random()*</span><span class="s3">5</span><span class="s0">;</span>
+        <span class="s1">action[</span><span class="s3">4</span><span class="s1">]=Math.round(Math.random())</span><span class="s0">;</span>
+        <span class="s0">return </span><span class="s1">action</span><span class="s0">;</span>
+    <span class="s1">}</span>
 <span class="s1">}</span>
 </pre>
 </body>

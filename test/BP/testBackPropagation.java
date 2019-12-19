@@ -2,6 +2,10 @@ package BP;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class testBackPropagation {
@@ -50,7 +54,7 @@ public class testBackPropagation {
     }
 
     @Test
-    void testTrain(){
+    void testTrain() throws IOException {
         double[] X={1,1};
         double error=BP1.train(X,-1);
         System.out.println(error);

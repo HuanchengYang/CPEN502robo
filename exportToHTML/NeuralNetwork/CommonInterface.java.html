@@ -1,0 +1,70 @@
+<html>
+<head>
+<title>CommonInterface.java</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cc7832;}
+.s1 { color: #a9b7c6;}
+.s2 { color: #629755; font-style: italic;}
+.s3 { color: #629755; font-weight: bold; font-style: italic;}
+</style>
+</head>
+<body bgcolor="#2b2b2b">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+CommonInterface.java</font>
+</center></td></tr></table>
+<pre><span class="s0">package </span><span class="s1">NeuralNetwork</span><span class="s0">;</span>
+
+<span class="s0">import </span><span class="s1">java.io.File</span><span class="s0">;</span>
+<span class="s0">import </span><span class="s1">java.io.IOException</span><span class="s0">;</span>
+
+<span class="s2">/**</span>
+ <span class="s2">7 * This interface is common to both the Neural Net and LUT interfaces.</span>
+ <span class="s2">8 * The idea is that you should be able to easily switch the LUT</span>
+ <span class="s2">9 * for the Neural Net since the interfaces are identical.</span>
+ <span class="s2">10 * @date 20 June 2012</span>
+ <span class="s2">11 * @author sarbjit</span>
+ <span class="s2">12 *</span>
+ <span class="s2">13 */</span>
+
+<span class="s0">public interface </span><span class="s1">CommonInterface {</span>
+    <span class="s2">/**</span>
+     <span class="s2">* * @param X The input vector. An array of doubles.</span>
+     <span class="s2">* </span><span class="s3">@return </span><span class="s2">The value returned by th LUT or NN for this input vector</span>
+     <span class="s2">*/</span>
+    <span class="s0">public double </span><span class="s1">outputFor(</span><span class="s0">double</span><span class="s1">[] X)</span><span class="s0">;</span>
+
+    <span class="s2">/**</span>
+     <span class="s2">* This method will tell the NN or the LUT the output</span>
+     <span class="s2">* value that should be mapped to the given input vector. I.e.</span>
+     <span class="s2">* the desired correct output value for an input.</span>
+     <span class="s2">* </span><span class="s3">@param </span><span class="s2">X The input vector</span>
+     <span class="s2">* </span><span class="s3">@param </span><span class="s2">argValue The new value to learn</span>
+     <span class="s2">* </span><span class="s3">@return </span><span class="s2">The error in the output for that input vector</span>
+     <span class="s2">*/</span>
+
+    <span class="s0">public double </span><span class="s1">train(</span><span class="s0">double</span><span class="s1">[] X</span><span class="s0">, double </span><span class="s1">argValue)</span><span class="s0">;</span>
+
+    <span class="s2">/**</span>
+    <span class="s2">* A method to write either a LUT or weights of an neural net to a file.</span>
+    <span class="s2">* </span><span class="s3">@param </span><span class="s2">argFile of type File.</span>
+    <span class="s2">*/</span>
+
+    <span class="s0">public void </span><span class="s1">save(File argFile) </span><span class="s0">throws </span><span class="s1">IOException</span><span class="s0">;</span>
+
+    <span class="s2">/**</span>
+     <span class="s2">* Loads the LUT or neural net weights from file. The load must of course</span>
+     <span class="s2">* have knowledge of how the data was written out by the save method.</span>
+     <span class="s2">* You should raise an error in the case that an attempt is being</span>
+     <span class="s2">* made to load data into an LUT or neural net whose structure does not match</span>
+     <span class="s2">* the data in the file. (e.g. wrong number of hidden neurons).</span>
+     <span class="s2">* </span><span class="s3">@throws </span><span class="s2">IOException</span>
+     <span class="s2">*/</span>
+    <span class="s0">public void </span><span class="s1">load(File argFile) </span><span class="s0">throws </span><span class="s1">IOException</span><span class="s0">;</span>
+
+<span class="s1">}</span>
+</pre>
+</body>
+</html>
